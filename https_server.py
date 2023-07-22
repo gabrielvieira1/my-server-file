@@ -5,6 +5,7 @@ import webbrowser
 import pyzipper
 import getpass
 import re
+import socket
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from ssl import PROTOCOL_TLS_SERVER, SSLContext
 
@@ -84,8 +85,10 @@ def main(args):
     server.serve_forever()
 
 def parse_args():
+    # Obter o IP da máquina
+    machine_ip = socket.gethostbyname(socket.gethostname())
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", type=str, default="localhost")
+    parser.add_argument("--host", type=str, default=machine_ip)
     parser.add_argument("--port", type=int, default=4443)
     return parser.parse_args()
 

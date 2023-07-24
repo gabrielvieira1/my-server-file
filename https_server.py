@@ -6,15 +6,59 @@ import pyzipper
 import getpass
 import re
 import socket
-from http.server import HTTPServer, SimpleHTTPRequestHandler
-from ssl import PROTOCOL_TLS_SERVER, SSLContext
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import parse_qs
 
+from ssl import PROTOCOL_TLS_SERVER, SSLContext
 from self_signed import SelfSignedCertificate
 
 def is_strong_password(password):
     # Expressão regular para verificar a validade da senha
     pattern = r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$"
     return re.match(pattern, password)
+
+class CustomRequestHandler(BaseHTTPRequestHandler):
+   def do_GET(self):
+       if self.path == '/upload_form':
+           # Carregar o formulário HTML de upload
+           self.send_response(200)
+           self.send_header('Content-type', 'text/html')
+           self.end_headers()
+
+           with open('upload_form.html', 'rb') as f:
+               self.wfile.write(f.read())
+       else:
+           self.send_response(404)
+           self.end_headers()
+
+   def do_POST(self):
+       if self.path == '/upload':
+           content_length = int(self.headers['Content-Length'])
+           post_data = self.rfile.read(content_length)
+           data = parse_qs(post_data)
+
+           # Obter o arquivo enviado pelo formulário
+           file_item = data.get('file_upload')
+
+           if file_item:
+               # O campo 'file_upload' contém o arquivo enviado
+               file_name = file_item[0].decode('utf-8')
+               file_path = os.path.join(self.folder_encrypted_path, file_name)
+
+               with open(file_path, 'wb') as f:
+                   # Salvar o conteúdo do arquivo no diretório correto
+                   f.write(self.rfile.read(int(self.headers['Content-Length'])))
+
+               self.send_response(200)
+               self.end_headers()
+               self.wfile.write(b'Arquivo enviado com sucesso!')
+           else:
+               self.send_response(400)
+               self.end_headers()
+               self.wfile.write(b'Nenhum arquivo enviado!')
+       else:
+           self.send_response(404)
+           self.end_headers()
 
 def main(args):
     # Criar a pasta "BielFile" na pasta Documentos do usuário, caso ela não exista
@@ -75,7 +119,7 @@ def main(args):
 
     ssl_context = SSLContext(PROTOCOL_TLS_SERVER)
     ssl_context.load_cert_chain(SelfSignedCertificate(args.host).path)
-    server = HTTPServer((args.host, args.port), SimpleHTTPRequestHandler)
+    server = HTTPServer((args.host, args.port), BaseHTTPRequestHandler)
     server.socket = ssl_context.wrap_socket(server.socket, server_side=True)
 
     # Mude o diretório atual para a pasta "BielFile" para que o servidor sirva arquivos a partir dela

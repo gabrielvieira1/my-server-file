@@ -12,53 +12,57 @@ from urllib.parse import parse_qs
 from ssl import PROTOCOL_TLS_SERVER, SSLContext
 from self_signed import SelfSignedCertificate
 
+
 def is_strong_password(password):
     # Expressão regular para verificar a validade da senha
     pattern = r"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$"
     return re.match(pattern, password)
 
+
 class CustomRequestHandler(BaseHTTPRequestHandler):
-   def do_GET(self):
-       if self.path == '/upload_form':
-           # Carregar o formulário HTML de upload
-           self.send_response(200)
-           self.send_header('Content-type', 'text/html')
-           self.end_headers()
+    def do_GET(self):
+        if self.path == '/upload_form':
+            # Carregar o formulário HTML de upload
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
 
-           with open('upload_form.html', 'rb') as f:
-               self.wfile.write(f.read())
-       else:
-           self.send_response(404)
-           self.end_headers()
+            with open('upload_form.html', 'rb') as f:
+                self.wfile.write(f.read())
+        else:
+            self.send_response(404)
+            self.end_headers()
 
-   def do_POST(self):
-       if self.path == '/upload':
-           content_length = int(self.headers['Content-Length'])
-           post_data = self.rfile.read(content_length)
-           data = parse_qs(post_data)
+    def do_POST(self):
+        if self.path == '/upload':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = parse_qs(post_data)
 
-           # Obter o arquivo enviado pelo formulário
-           file_item = data.get('file_upload')
+            # Obter o arquivo enviado pelo formulário
+            file_item = data.get('file_upload')
 
-           if file_item:
-               # O campo 'file_upload' contém o arquivo enviado
-               file_name = file_item[0].decode('utf-8')
-               file_path = os.path.join(self.folder_encrypted_path, file_name)
+            if file_item:
+                # O campo 'file_upload' contém o arquivo enviado
+                file_name = file_item[0].decode('utf-8')
+                file_path = os.path.join(self.folder_encrypted_path, file_name)
 
-               with open(file_path, 'wb') as f:
-                   # Salvar o conteúdo do arquivo no diretório correto
-                   f.write(self.rfile.read(int(self.headers['Content-Length'])))
+                with open(file_path, 'wb') as f:
+                    # Salvar o conteúdo do arquivo no diretório correto
+                    f.write(self.rfile.read(
+                        int(self.headers['Content-Length'])))
 
-               self.send_response(200)
-               self.end_headers()
-               self.wfile.write(b'Arquivo enviado com sucesso!')
-           else:
-               self.send_response(400)
-               self.end_headers()
-               self.wfile.write(b'Nenhum arquivo enviado!')
-       else:
-           self.send_response(404)
-           self.end_headers()
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'Arquivo enviado com sucesso!')
+            else:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(b'Nenhum arquivo enviado!')
+        else:
+            self.send_response(404)
+            self.end_headers()
+
 
 def main(args):
     # Criar a pasta "BielFile" na pasta Documentos do usuário, caso ela não exista
@@ -87,7 +91,8 @@ def main(args):
 
     # Solicitar que o usuário digite uma senha forte
     while True:
-        password = getpass.getpass("Digite uma senha forte (mínimo de 8 caracteres, contendo letras, números e caracteres especiais): ")
+        password = getpass.getpass(
+            "Digite uma senha forte (mínimo de 8 caracteres, contendo letras, números e caracteres especiais): ")
         if is_strong_password(password):
             break
         else:
@@ -95,7 +100,8 @@ def main(args):
             print("Certifique-se de que a senha contenha pelo menos 8 caracteres, letras, números e caracteres especiais.")
 
     # Compactar a pasta "FolderEncrypted" com a senha aleatória
-    encrypted_zip_filename = os.path.join(biel_folder_path, "FolderEncrypted_Encrypted.zip")
+    encrypted_zip_filename = os.path.join(
+        biel_folder_path, "FolderEncrypted_Encrypted.zip")
     with pyzipper.AESZipFile(encrypted_zip_filename, "w", compression=pyzipper.ZIP_LZMA,
                              encryption=pyzipper.WZ_AES) as zip_file:
         zip_file.setpassword(password.encode("utf-8"))
@@ -128,6 +134,7 @@ def main(args):
     webbrowser.open(f"https://{args.host}:{args.port}/")
     server.serve_forever()
 
+
 def parse_args():
     # Obter o IP da máquina
     machine_ip = socket.gethostbyname(socket.gethostname())
@@ -135,6 +142,7 @@ def parse_args():
     parser.add_argument("--host", type=str, default=machine_ip)
     parser.add_argument("--port", type=int, default=4443)
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     main(parse_args())
